@@ -21,7 +21,7 @@ contract FuturesNFT is ERC721, Ownable {
     Counters.Counter private _tokenIds;
 
     address payable public constant weth;
-    string baseURI;
+    string private baseURI;
 
     struct Future {
         uint amount;
