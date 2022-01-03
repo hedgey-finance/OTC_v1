@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
-//import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -20,6 +19,7 @@ interface IWETH {
 interface IFuturesNFT {
     function createFuture(address vester, uint _amount, address _asset, uint _expiry) external returns (uint);
     function transferOwnership(address newOwner) external;
+    function updateBaseURI(string memory uri) external;
 }
 
 
@@ -113,6 +113,11 @@ contract HedgeyOTC is ReentrancyGuard {
         IFuturesNFT(futureContract).transferOwnership(newOwner);
     }
 
+    function setNewURI(string memory uri) external {
+        require(msg.sender == collector);
+        IFuturesNFT(futureContract).updateBaseURI(uri);
+    }
+
     //functions create deal
     //buy tokens
     //close / cancel
@@ -128,7 +133,7 @@ contract HedgeyOTC is ReentrancyGuard {
         address payable _buyer
     ) payable external {
         require(_maturity > block.timestamp);
-        //require(msg.sender != _buyer, "cant sell to yourself");
+        require(amount >= min, "min error");
         //pull in tokens
         if (_token == weth) {
             require(msg.value == amount, "wrong msg.value");
