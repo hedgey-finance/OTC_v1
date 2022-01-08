@@ -20,7 +20,7 @@ contract FuturesNFT is ERC721, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    address payable public constant weth;
+    address payable public weth;
     string private baseURI;
 
     struct Future {
@@ -31,9 +31,9 @@ contract FuturesNFT is ERC721, Ownable {
 
     mapping(uint => Future) public futures; //maps the NFT ID to the Future
 
-    constructor(address payable _weth, string memory _baseURI) ERC721("Futures", "F") {
+    constructor(address payable _weth, string memory uri) ERC721("Futures", "F") {
         weth = _weth;
-        baseURI = _baseURI;
+        baseURI = uri;
     }
 
     //function strictly for weth handling
@@ -48,33 +48,36 @@ contract FuturesNFT is ERC721, Ownable {
         //creates a future struct mapped to the minted NFT
         require(_amount > 0 && _asset != address(0) && _expiry > block.timestamp);
         futures[newItemId] = Future(_amount, _asset, _expiry);
-        emit FutureCreated(newItemId, _amount, _asset, _expiry);
+        emit FutureCreated(newItemId, holder, _amount, _asset, _expiry);
         return newItemId;
-    }
-
-    function baseTokenURI() public view returns (string memory) {
-        return baseURI;
     }
 
     
 
-    function redeemFuture(uint _id) external {
-        (uint _amount, address _asset, uint _expiry) = _redeemFuture(payable(msg.sender), _id);
-        emit FutureRedeemed(_id, _amount, _asset, _expiry);
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
+
+    function updateBaseURI(string memory uri) onlyOwner external {
+        baseURI = uri;
+    }
+    
+
+    function redeemFuture(uint _id) external returns (bool) {
+        _redeemFuture(payable(msg.sender), _id);
+        return true;
     }
 
 
-    function _redeemFuture(address payable holder, uint _id) internal returns (uint _amount, address _asset, uint _expiry) {
+    function _redeemFuture(address payable holder, uint _id) internal {
         require(ownerOf(_id) == holder);
         Future storage future = futures[_id];
         require(future.expiry < block.timestamp && future.amount > 0);
         //delivers the vested tokens to the vester
         withdraw(future.asset, holder, future.amount);
-        _amount = future.amount;
-        _asset = future.asset;
-        _expiry = future.expiry;
         delete futures[_id];
         _burn(_id);
+        emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
     }
 
     function withdraw(address _token, address payable to, uint _total) internal {
@@ -86,6 +89,6 @@ contract FuturesNFT is ERC721, Ownable {
         }
     }
 
-    event FutureCreated(uint _i, uint _amount, address _asset, uint _expiry);
-    event FutureRedeemed(uint _i, uint _amount, address _asset, uint _expiry);
+    event FutureCreated(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
+    event FutureRedeemed(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
 }
