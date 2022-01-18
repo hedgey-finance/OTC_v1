@@ -98,6 +98,7 @@ contract HedgeyOTC is ReentrancyGuard {
     function changeFee(uint _fee) external {
         require(msg.sender == collector);
         fee = _fee;
+        emit FeeChanged(fee);
     }
 
     function changeCollector(address payable _collector) external {
@@ -108,6 +109,7 @@ contract HedgeyOTC is ReentrancyGuard {
     function changeFutureContract(address _fc) external {
         require(msg.sender == collector);
         futureContract = _fc;
+        emit FutureContractChanged(_fc);
     }
 
     function transferFC_Owner(address newOwner) external {
@@ -212,5 +214,7 @@ contract HedgeyOTC is ReentrancyGuard {
     event TokensBought(uint _d, uint _amount, uint _remainingAmount);
     event DealClosed(uint _d);
     event FutureCreated(address _owner, address _token, uint _unlockDate, uint _amount);
+    event FeeChanged(uint _fee);
+    event FutureContractChanged(address _fc);
     
 }
