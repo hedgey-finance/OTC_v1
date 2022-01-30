@@ -76,10 +76,10 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
         Future storage future = futures[_id];
         require(future.expiry < block.timestamp && future.amount > 0);
         //delivers the vested tokens to the vester
+        emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
         withdraw(future.asset, holder, future.amount);
         delete futures[_id];
         _burn(_id);
-        emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
     }
 
     function withdraw(address _token, address payable to, uint _total) internal {
