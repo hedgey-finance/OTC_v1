@@ -149,7 +149,7 @@ contract HedgeyOTC is ReentrancyGuard {
             SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), amount);
         }
         uint postBalance = IERC20(_token).balanceOf(address(this));
-        assert(postBalance - currentBalance == _amount);
+        assert(postBalance - currentBalance == amount);
         deals[d++] = Deal(payable(msg.sender), _token, _paymentCurrency, amount, min, _price, _maturity, _unlockDate, true, payable(_buyer));
         emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, amount, min, _price, _maturity, _unlockDate, true, _buyer);
     }
