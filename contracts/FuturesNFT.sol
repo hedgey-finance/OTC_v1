@@ -50,7 +50,7 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
         //creates a future struct mapped to the minted NFT
         require(_amount > 0 && _asset != address(0) && _expiry > block.timestamp);
         futures[newItemId] = Future(_amount, _asset, _expiry);
-        emit NFTCreated(newItemId, holder, _amount, _asset, _expiry);
+        emit FutureCreated(newItemId, holder, _amount, _asset, _expiry);
         return newItemId;
     }
 
@@ -76,7 +76,7 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
         Future storage future = futures[_id];
         require(future.expiry < block.timestamp && future.amount > 0);
         //delivers the vested tokens to the vester
-        emit NFTRedeemed(_id, holder, future.amount, future.asset, future.expiry);
+        emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
         withdraw(future.asset, holder, future.amount);
         delete futures[_id];
         _burn(_id);
@@ -91,6 +91,6 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
         }
     }
 
-    event NFTCreated(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
-    event NFTRedeemed(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
+    event FutureCreated(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
+    event FutureRedeemed(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
 }
