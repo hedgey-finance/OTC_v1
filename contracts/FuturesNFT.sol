@@ -14,7 +14,7 @@ interface IWETH {
     function withdraw(uint) external;
 }
 
-contract Hedgey_Hoglets is ERC721Enumerable, Ownable {
+contract HedgeyHoglets is ERC721Enumerable, Ownable {
     using SafeERC20 for IERC20;
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
@@ -31,7 +31,7 @@ contract Hedgey_Hoglets is ERC721Enumerable, Ownable {
 
     mapping(uint => Future) public futures; //maps the NFT ID to the Future
 
-    constructor(address payable _weth, string memory uri) ERC721("Hedgey_Hoglets", "HDHG") {
+    constructor(address payable _weth, string memory uri) ERC721("HedgeyHoglets", "HDHG") {
         weth = _weth;
         baseURI = uri;
     }
