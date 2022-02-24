@@ -14,7 +14,7 @@ interface IWETH {
     function withdraw(uint) external;
 }
 
-contract FuturesNFT is ERC721Enumerable, Ownable {
+contract Hedgey_Hoglets is ERC721Enumerable, Ownable {
     using SafeERC20 for IERC20;
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
@@ -31,7 +31,7 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
 
     mapping(uint => Future) public futures; //maps the NFT ID to the Future
 
-    constructor(address payable _weth, string memory uri) ERC721("Futures", "F") {
+    constructor(address payable _weth, string memory uri) ERC721("Hedgey_Hoglets", "HDHG") {
         weth = _weth;
         baseURI = uri;
     }
@@ -79,9 +79,9 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
 
 
     function _redeemFuture(address payable holder, uint _id) internal {
-        require(ownerOf(_id) == holder);
+        require(ownerOf(_id) == holder, "you are not the owner");
         Future storage future = futures[_id];
-        require(future.expiry < block.timestamp && future.amount > 0);
+        require(future.expiry < block.timestamp && future.amount > 0,"not unlock time yet");
         //delivers the vested tokens to the vester
         emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
         withdraw(future.asset, holder, future.amount);
