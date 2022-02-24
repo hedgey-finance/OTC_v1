@@ -94,6 +94,7 @@ contract HedgeyOTC is ReentrancyGuard {
     ) payable external {
         require(_maturity > block.timestamp);
         require(amount >= min, "min error");
+        require((min * _price) / (10 ** Decimals(_paymentCurrency).decimals()) > 0, "minimum too small");
         uint currentBalance = IERC20(_token).balanceOf(address(this));
         //pull in tokens
         if (_token == weth) {
