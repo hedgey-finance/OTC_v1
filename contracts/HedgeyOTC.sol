@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
@@ -7,10 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 
-
-interface Decimals {
-    function decimals() external view returns (uint256);
+interface IFuturesNFT {
+    function createFuture(address vester, uint _amount, address _asset, uint _expiry) external returns (uint);
 }
+
 
 interface IWETH {
     function deposit() external payable;
@@ -18,10 +17,8 @@ interface IWETH {
     function withdraw(uint) external;
 }
 
-interface IFuturesNFT {
-    function createFuture(address vester, uint _amount, address _asset, uint _expiry) external returns (uint);
-    function transferOwnership(address newOwner) external;
-    function updateBaseURI(string memory uri) external;
+interface Decimals {
+    function decimals() external view returns (uint256);
 }
 
 
@@ -29,15 +26,11 @@ contract HedgeyOTC is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
 
-    uint public fee;
-    address payable public collector;
     address payable public weth;
     uint public d = 0;
     address public futureContract;
 
-    constructor(uint _fee, address payable _collector, address payable _weth, address _fc) {
-        fee = _fee;
-        collector = _collector;
+    constructor(address payable _weth, address _fc) {
         weth = _weth;
         futureContract = _fc;
     }
@@ -75,16 +68,6 @@ contract HedgeyOTC is ReentrancyGuard {
         }
     }
 
-    function transferPymtWithFee(address _token, address from, address payable to, uint _total) internal {
-        uint _fee = (_total * fee) / (1e4);
-        uint _amt = _total - _fee;
-        if (_token == weth) {
-            require(msg.value == _total, "transfer issue: wrong amount of eth sent");
-        }
-        transferPymt(_token, from, to, _amt); //transfer the stub to recipient
-        if (_fee > 0) transferPymt(_token, from, collector, _fee); //transfer fee to fee collector
-    }
-
     function withdraw(address _token, address payable to, uint _total) internal {
         if (_token == weth) {
             IWETH(weth).withdraw(_total);
@@ -94,33 +77,6 @@ contract HedgeyOTC is ReentrancyGuard {
         }
     }
 
-    //admin function to update the fee amount
-    function changeFee(uint _fee) external {
-        require(msg.sender == collector);
-        fee = _fee;
-        emit FeeChanged(fee);
-    }
-
-    function changeCollector(address payable _collector) external {
-        require(msg.sender == collector);
-        collector = _collector;
-    }
-
-    function changeFutureContract(address _fc) external {
-        require(msg.sender == collector);
-        futureContract = _fc;
-        emit FutureContractChanged(_fc);
-    }
-
-    function transferFC_Owner(address newOwner) external {
-        require(msg.sender == collector);
-        IFuturesNFT(futureContract).transferOwnership(newOwner);
-    }
-
-    function setNewURI(string memory uri) external {
-        require(msg.sender == collector);
-        IFuturesNFT(futureContract).updateBaseURI(uri);
-    }
 
     //functions create deal
     //buy tokens
@@ -175,15 +131,15 @@ contract HedgeyOTC is ReentrancyGuard {
 
     function buy(uint _d, uint amount) payable external nonReentrant {
         Deal storage deal = deals[_d];
-        require(msg.sender != deal.seller);
+        require(msg.sender != deal.seller, "youre the seller");
         require(deal.open && deal.maturity >= block.timestamp, "deal closed");
         require(msg.sender == deal.buyer || deal.buyer == address(0x0), "not allowed to buy");
         require((amount >= deal.minimumPurchase || amount == deal.remainingAmount) && deal.remainingAmount >= amount, "not enough");
         uint decimals = Decimals(deal.token).decimals();
         uint purchase = (amount * deal.price) / (10 ** decimals);
         uint balanceCheck = (deal.paymentCurrency == weth) ? msg.value : IERC20(deal.paymentCurrency).balanceOf(msg.sender);
-        require(balanceCheck >= purchase);
-        transferPymtWithFee(deal.paymentCurrency, msg.sender, deal.seller, purchase);
+        require(balanceCheck >= purchase, "not enough to purchase");
+        transferPymt(deal.paymentCurrency, msg.sender, deal.seller, purchase);
         if (deal.unlockDate > block.timestamp) {
             //creates a futures contract
             lockTokens(payable(msg.sender), deal.token, amount, deal.unlockDate);
@@ -197,7 +153,7 @@ contract HedgeyOTC is ReentrancyGuard {
     }
 
     function lockTokens(address payable _owner, address _token, uint _amount, uint _unlockDate) internal {
-        require(_unlockDate > block.timestamp);
+        require(_unlockDate > block.timestamp, "no need to lock up");
         uint currentBalance = IERC20(_token).balanceOf(futureContract);
         //physically creates the future and mints an NFT
         IFuturesNFT(futureContract).createFuture(_owner, _amount, _token, _unlockDate);
@@ -216,7 +172,5 @@ contract HedgeyOTC is ReentrancyGuard {
     event TokensBought(uint _d, uint _amount, uint _remainingAmount);
     event DealClosed(uint _d);
     event FutureCreated(address _owner, address _token, uint _unlockDate, uint _amount);
-    event FeeChanged(uint _fee);
-    event FutureContractChanged(address _fc);
     
 }
