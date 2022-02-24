@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
@@ -9,13 +8,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-
 interface IWETH {
     function deposit() external payable;
     function transfer(address to, uint value) external returns (bool);
     function withdraw(uint) external;
 }
-
 
 contract FuturesNFT is ERC721Enumerable, Ownable {
     using SafeERC20 for IERC20;
@@ -24,6 +21,7 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
 
     address payable public weth;
     string private baseURI;
+    uint8 private ownerSet = 0;
 
     struct Future {
         uint amount;
@@ -40,6 +38,15 @@ contract FuturesNFT is ERC721Enumerable, Ownable {
 
     //function strictly for weth handling
     receive() external payable {}
+
+
+    function transferOwnership(address newOwner) public override onlyOwner {
+        require(ownerSet == 0, "owner already set");
+        ownerSet = 1;
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
 
     //new minting function for the owner
 
