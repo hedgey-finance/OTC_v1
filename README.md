@@ -10,11 +10,11 @@ The NFT is then minted to the owner of the locked tokens, whereupon after the ti
 
 # Active deployments:
 
-**ETHEREUM MAINNET**   
-**Gnosis Network**   
-**POLYGON NETWORK**   
-**FANTOM NETWORK**    
+**ETHEREUM**   
+**GNOSIS**   
+**POLYGON**   
+**FANTOM**    
 **AVALANCHE C-CHAIN**    
 **BINANCE SMART CHAIN**    
-**CELO MAINNET**   
-**HARMONY NETWORK**   
+**CELO**   
+**HARMONY**   
