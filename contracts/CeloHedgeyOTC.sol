@@ -77,14 +77,8 @@ contract HedgeyOTC is ReentrancyGuard {
         require((min * _price) / (10 ** Decimals(_paymentCurrency).decimals()) > 0, "minimum too small");
         uint currentBalance = IERC20(_token).balanceOf(address(this));
         //pull in tokens
-        if (_token == weth) {
-            require(msg.value == amount, "wrong msg.value");
-            IWETH(weth).deposit{value: amount}();
-            assert(IWETH(weth).transfer(address(this), amount));
-        } else {
-            require(IERC20(_token).balanceOf(msg.sender) >= amount);
-            SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), amount);
-        }
+        require(IERC20(_token).balanceOf(msg.sender) >= amount);
+        SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), amount);
         uint postBalance = IERC20(_token).balanceOf(address(this));
         assert(postBalance - currentBalance == amount);
         deals[d++] = Deal(payable(msg.sender), _token, _paymentCurrency, amount, min, _price, _maturity, _unlockDate, true, payable(_buyer));
@@ -99,12 +93,7 @@ contract HedgeyOTC is ReentrancyGuard {
         require(deal.remainingAmount > 0, "all tokens sold");
         require(deal.open, "already closed");
         //send back the remainder to the seller
-        if (deal.token == weth) {
-            IWETH(weth).withdraw(deal.remainingAmount);
-            payable(msg.sender).transfer(deal.remainingAmount);
-        } else {
-            SafeERC20.safeTransfer(IERC20(deal.token), msg.sender, deal.remainingAmount);
-        }
+        SafeERC20.safeTransfer(IERC20(deal.token), msg.sender, deal.remainingAmount);
         deal.remainingAmount = 0;
         deal.open = false;
         emit DealClosed(_d);
@@ -118,7 +107,7 @@ contract HedgeyOTC is ReentrancyGuard {
         require((amount >= deal.minimumPurchase || amount == deal.remainingAmount) && deal.remainingAmount >= amount, "not enough");
         uint decimals = Decimals(deal.token).decimals();
         uint purchase = (amount * deal.price) / (10 ** decimals);
-        uint balanceCheck = (deal.paymentCurrency == weth) ? msg.value : IERC20(deal.paymentCurrency).balanceOf(msg.sender);
+        uint balanceCheck = IERC20(deal.paymentCurrency).balanceOf(msg.sender);
         require(balanceCheck >= purchase, "not enough to purchase");
         transferPymt(deal.paymentCurrency, msg.sender, deal.seller, purchase);
         if (deal.unlockDate > block.timestamp) {
