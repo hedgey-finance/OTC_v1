@@ -8,3 +8,13 @@ They can sell their tokens in a single chunk to an individual buyer, or they can
 The seller can also set a timelock on the tokens that are purchased. IF the timelock unlock date is beyond the time when a buyer purchases the tokens, then an NFT is minted to record the timelock position. 
 The NFT is then minted to the owner of the locked tokens, whereupon after the time has passed and the tokens are unlocked, the owner can redeem their NFT, burning it in the contract and thus redeeming / withdrawing their locked tokens from protocol. 
 
+# Active deployments:
+
+**ETHEREUM MAINNET**   
+**Gnosis Network**   
+**POLYGON NETWORK**   
+**FANTOM NETWORK**    
+**AVALANCHE C-CHAIN**    
+**BINANCE SMART CHAIN**    
+**CELO MAINNET**   
+**HARMONY NETWORK**   
