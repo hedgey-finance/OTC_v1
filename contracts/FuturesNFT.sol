@@ -41,7 +41,7 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
 
 
     function transferOwnership(address newOwner) public override onlyOwner {
-        require(ownerSet == 0, "owner already set");
+        require(ownerSet == 0, "HNEC01: Owner already set");
         ownerSet = 1;
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         _transferOwnership(newOwner);
@@ -79,9 +79,9 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
 
 
     function _redeemFuture(address payable holder, uint _id) internal {
-        require(ownerOf(_id) == holder, "you are not the owner");
+        require(ownerOf(_id) == holder, "HNEC02: Only the NFT Owner");
         Future storage future = futures[_id];
-        require(future.expiry < block.timestamp && future.amount > 0,"not unlock time yet");
+        require(future.expiry < block.timestamp && future.amount > 0,"HNEC03: Tokens are still locked");
         //delivers the vested tokens to the vester
         emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
         withdraw(future.asset, holder, future.amount);
