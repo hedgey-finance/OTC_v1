@@ -8,78 +8,109 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-interface IWETH {
-    function deposit() external payable;
-    function transfer(address to, uint value) external returns (bool);
-    function withdraw(uint) external;
-}
 
+
+
+/**
+* @title An NFT representation of ownership of time locked tokens
+* @notice The time locked tokens are redeemable by the owner of the NFT
+* @notice The NFT is basic ERC721 with an ownable usage to ensure only a single owner call mint new NFTs
+* @notice it uses the Enumerable extension to allow for easy lookup to pull balances of one account for multiple NFTs
+*/
 contract HedgeyHoglets is ERC721Enumerable, Ownable {
     using SafeERC20 for IERC20;
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
     string private baseURI;
+    /// @dev ownerSet is a variable set to 0 ensuring that the owner of this contract can only be changed once
+    /// @dev after the contract is deployed by a wallet, the ownership is transferred to the OTC contract
+    /// @dev the OTC contract cannot change ownership using this variable check
     uint8 private ownerSet = 0;
 
+
+    /// @dev the Future is the storage in a struct of the tokens that are time locked
+    /// @dev the Future contains the information about the amount of tokens, the underlying token address (asset), and the date in which they are unlocked
     struct Future {
         uint amount;
         address asset;
         uint expiry;
     }
 
-    mapping(uint => Future) public futures; //maps the NFT ID to the Future
+    /// @dev this maping maps the same uint from Counters that is used to mint an NFT to the Future struct
+    mapping(uint => Future) public futures;
 
     constructor(string memory uri) ERC721("HedgeyHoglets", "HDHG") {
         baseURI = uri;
     }
 
-    //function strictly for weth handling
-    receive() external payable {}
 
 
+    /// @dev function for transferring ownership one time only to the OTC contract
+    /// @dev the OTC contract cannot transfer ownership again for security
+    /// @param the new OTC owner address 
     function transferOwnership(address newOwner) public override onlyOwner {
-        require(ownerSet == 0, "owner already set");
+        require(ownerSet == 0, "HNEC01: Owner already set");
         ownerSet = 1;
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         _transferOwnership(newOwner);
     }
 
 
-    //new minting function for the owner
-
+    /**
+     * @notice this external function creates a Future position
+     * @dev A Future position is the combination of an NFT and a Future struct with the same index uint storing both information separately but with the same index
+     * @dev the OTC contract as the owner is only allowed to call this function to ensure integrity of the minting process
+     * @param the address holder is the buyer and minter of the NFT
+     * @param _amount is the amount with full decimals of the tokens being locked into the future
+     * @param the _asset is the address of the tokens that are being delivered to this contract to be held and locked
+     * @param the _expiry is the date in UTC in which the tokens can become redeemed - evaluated based on the block.timestamp
+    */
     function createFuture(address holder, uint _amount, address _asset, uint _expiry) onlyOwner external returns (uint) {
         _tokenIds.increment();
         uint newItemId = _tokenIds.current();
+        /// @dev record the NFT miting with the newItemID coming from Counters library
         _safeMint(holder, newItemId);
-        //creates a future struct mapped to the minted NFT
-        require(_amount > 0 && _asset != address(0) && _expiry > block.timestamp);
+        /// @dev require that the amount is not 0, address is not the 0 address, and that the expiration date is actually beyond today
+        require(_amount > 0 && _asset != address(0) && _expiry > block.timestamp, "HEC02: NFT Minting Error");
+        /// @dev using the same newItemID we generate a Future struct recording the token address (asset), the amount of tokens (amount), and time it can be unlocked (_expiry)
         futures[newItemId] = Future(_amount, _asset, _expiry);
         emit FutureCreated(newItemId, holder, _amount, _asset, _expiry);
         return newItemId;
     }
 
     
-
+    /// @dev internal function used by the standard ER721 function tokenURI to retrieve the baseURI privately held to visualize and get the metadata
     function _baseURI() internal view override returns (string memory) {
         return baseURI;
     }
 
+    /// @dev onlyOwner function to set the base URI after the contract has been launched
+    /// @dev there is no actual on-chain functions that require this URI to be anything beyond a blank string ("")
+    /// @dev there are no vulnerabilities should this be changed as it is for astetic purposes only 
     function updateBaseURI(string memory uri) onlyOwner external {
         baseURI = uri;
     }
     
-
+    /// @notice this is the external function that actually redeems an NFT futures position
+    /// @dev this function calls the _redeemFuture(...) internal function which handles the requirements and checks
     function redeemFuture(uint _id) external returns (bool) {
-        _redeemFuture(payable(msg.sender), _id);
+        _redeemFuture(msg.sender, _id);
         return true;
     }
 
-
-    function _redeemFuture(address payable holder, uint _id) internal {
-        require(ownerOf(_id) == holder, "you are not the owner");
+    /** 
+     * @notice This internal function, called by redeemFuture to physically burn the NFT and distribute the locked tokens to its owner
+     * @dev this function does five things: 1) Checks to ensure only the owner of the NFT can call this function
+     * @dev 2) it checks that the tokens can actually be unlocked based on the time from the expiration
+     * @dev 3) it burns the NFT - removing it from storage entirely
+     * @dev 4) it also deletes the futures struct from storage so that nothing can be redeemed from that storage index again
+     * @dev 5) it transfers out the tokens that have been locked - delivering them to the current owner of the NFT
+    */ 
+    function _redeemFuture(address holder, uint _id) internal {
+        require(ownerOf(_id) == holder, "HNEC03: Only the NFT Owner");
         Future storage future = futures[_id];
-        require(future.expiry < block.timestamp && future.amount > 0,"not unlock time yet");
+        require(future.expiry < block.timestamp && future.amount > 0,"HNEC04: Tokens are still locked");
         //delivers the vested tokens to the vester
         emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
         SafeERC20.safeTransfer(IERC20(future.asset), holder, future.amount);
@@ -88,6 +119,8 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
     }
 
 
+
+    ///@notice Events when a new NFT (future) is created and one with a Future is redeemed (burned)
     event FutureCreated(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
     event FutureRedeemed(uint _i, address _holder, uint _amount, address _asset, uint _expiry);
 }
