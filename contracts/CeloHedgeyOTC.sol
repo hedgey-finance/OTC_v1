@@ -45,7 +45,7 @@ contract HedgeyOTC is ReentrancyGuard {
     /**
      * @notice Deal is the struct that defines a single OTC offer, created by a seller
      * @param  Deal struct contains the following parameter definitions:
-     * @param 1) seller: This is the creator and seller of the deal, needs to be an address payable if the payment currenct is ETH / WETH
+     * @param 1) seller: This is the creator and seller of the deal
      * @param 2) token: This is the token that the seller deposits into the contract and which they are selling over the counter. The address defines this ERC20
      * @param ... the token ERC20 contract is required to have a public call function decimals() that returns a uint. This is required to price the amount of tokens being purchase
      * @param ... by the buyer - calculating exactly how much to deliver to the seller. 
@@ -85,7 +85,7 @@ contract HedgeyOTC is ReentrancyGuard {
     }
 
     /// @dev internal funciton that handles withdrawing tokens that are up for sale to buyers
-    function withdraw(address _token, address payable to, uint _total) internal {
+    function withdraw(address _token, address to, uint _total) internal {
         SafeERC20.safeTransfer(IERC20(_token), to, _total);
     }
 
@@ -116,7 +116,7 @@ contract HedgeyOTC is ReentrancyGuard {
         uint _maturity,
         uint _unlockDate,
         address _buyer
-    ) payable external {
+    ) external {
         require(_maturity > block.timestamp, "HEC01: Maturity before block timestamp");
         require(amount >= min, "HEC02: Amount less than minium");
         /// @dev this checks to make sure that if someone purchases the minimum amount, it is never equal to 0
@@ -167,7 +167,7 @@ contract HedgeyOTC is ReentrancyGuard {
      * @notice the NFT received is a separate smart contract, which also contains the locked tokens
      * @notice the Seller will receive payment in full immediately when triggering this function, there is no lock on payments
     */
-    function buy(uint _d, uint amount) payable external nonReentrant {
+    function buy(uint _d, uint amount) external nonReentrant {
         /// @dev pull the deal details from storage
         Deal storage deal = deals[_d];
         /// @dev we do not let the seller sell to themselves, must be a separate buyer
@@ -190,10 +190,10 @@ contract HedgeyOTC is ReentrancyGuard {
         transferPymt(deal.paymentCurrency, msg.sender, deal.seller, purchase);
         if (deal.unlockDate > block.timestamp) {
             /// @dev if the unlockdate is the in future, then we call our internal function lockTokens to lock those in the NFT contract
-            lockTokens(payable(msg.sender), deal.token, amount, deal.unlockDate);
+            lockTokens(msg.sender, deal.token, amount, deal.unlockDate);
         } else {
             /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
-            withdraw(deal.token, payable(msg.sender), amount);
+            withdraw(deal.token, msg.sender, amount);
         }
         /// @dev reduce the deal remaining amount by how much was purchased. If the remainder is 0, then we consider this deal closed and set our open bool to false
         deal.remainingAmount -= amount;
