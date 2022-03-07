@@ -92,17 +92,17 @@ contract HedgeyOTC is ReentrancyGuard {
         uint _unlockDate,
         address payable _buyer
     ) payable external {
-        require(_maturity > block.timestamp);
-        require(amount >= min, "min error");
-        require((min * _price) / (10 ** Decimals(_paymentCurrency).decimals()) > 0, "minimum too small");
+        require(_maturity > block.timestamp, "HEC01: Maturity before block timestamp");
+        require(amount >= min, "HEC02: Amount less than minium");
+        require((min * _price) / (10 ** Decimals(_paymentCurrency).decimals()) > 0, "HEC03: Minimum smaller than 0");
         uint currentBalance = IERC20(_token).balanceOf(address(this));
         //pull in tokens
         if (_token == weth) {
-            require(msg.value == amount, "wrong msg.value");
+            require(msg.value == amount, "HECA: Incorrect Transfer Value");
             IWETH(weth).deposit{value: amount}();
             assert(IWETH(weth).transfer(address(this), amount));
         } else {
-            require(IERC20(_token).balanceOf(msg.sender) >= amount);
+            require(IERC20(_token).balanceOf(msg.sender) >= amount, "HECB: Insufficient Balance");
             SafeERC20.safeTransferFrom(IERC20(_token), msg.sender, address(this), amount);
         }
         uint postBalance = IERC20(_token).balanceOf(address(this));
@@ -115,9 +115,9 @@ contract HedgeyOTC is ReentrancyGuard {
 
     function close(uint _d) external nonReentrant {
         Deal storage deal = deals[_d];
-        require(msg.sender == deal.seller, "not the seller");
-        require(deal.remainingAmount > 0, "all tokens sold");
-        require(deal.open, "already closed");
+        require(msg.sender == deal.seller, "HEC04: Only Seller Can Close");
+        require(deal.remainingAmount > 0, "HEC05: All tokens have been sold");
+        require(deal.open, "HEC06: Deal has been closed");
         //send back the remainder to the seller
         if (deal.token == weth) {
             IWETH(weth).withdraw(deal.remainingAmount);
@@ -132,14 +132,14 @@ contract HedgeyOTC is ReentrancyGuard {
 
     function buy(uint _d, uint amount) payable external nonReentrant {
         Deal storage deal = deals[_d];
-        require(msg.sender != deal.seller, "youre the seller");
-        require(deal.open && deal.maturity >= block.timestamp, "deal closed");
-        require(msg.sender == deal.buyer || deal.buyer == address(0x0), "not allowed to buy");
-        require((amount >= deal.minimumPurchase || amount == deal.remainingAmount) && deal.remainingAmount >= amount, "not enough");
+        require(msg.sender != deal.seller, "HEC07: Buyer cannot be seller");
+        require(deal.open && deal.maturity >= block.timestamp, "HEC06: Deal has been closed");
+        require(msg.sender == deal.buyer || deal.buyer == address(0x0), "HEC08: Whitelist or buyer allowance error");
+        require((amount >= deal.minimumPurchase || amount == deal.remainingAmount) && deal.remainingAmount >= amount, "HEC09: Insufficient Purchase Size");
         uint decimals = Decimals(deal.token).decimals();
         uint purchase = (amount * deal.price) / (10 ** decimals);
         uint balanceCheck = (deal.paymentCurrency == weth) ? msg.value : IERC20(deal.paymentCurrency).balanceOf(msg.sender);
-        require(balanceCheck >= purchase, "not enough to purchase");
+        require(balanceCheck >= purchase, "HECB: Insufficient Balance");
         transferPymt(deal.paymentCurrency, msg.sender, deal.seller, purchase);
         if (deal.unlockDate > block.timestamp) {
             //creates a futures contract
@@ -154,7 +154,7 @@ contract HedgeyOTC is ReentrancyGuard {
     }
 
     function lockTokens(address payable _owner, address _token, uint _amount, uint _unlockDate) internal {
-        require(_unlockDate > block.timestamp, "no need to lock up");
+        require(_unlockDate > block.timestamp, "HEC10: Unlocked");
         uint currentBalance = IERC20(_token).balanceOf(futureContract);
         //physically creates the future and mints an NFT
         IFuturesNFT(futureContract).createFuture(_owner, _amount, _token, _unlockDate);
