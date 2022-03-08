@@ -27,5 +27,23 @@
  *    7. Test reedeem function for errors:
  *     a) Test calling the function for an NFT that you are not the owner of
  *     b) test calling the function for an NFT you are the owner of, but the expiry date is still in the future
+ * **********TESTING FOR THE INHERRITED ERC721 METHODS*****************
+ * Methods: 
+ *    approve: this approves another address to spend the ERC721
+ *    safeTransferFrom (w/out Data): once approved another contract can transfer the NFT from one wallet to another
+ *    safeTransferFrom (with Data): once approved another contract can transfer the NFT from one wallet to another with callback data
+ *    setApprovalForAll: approves all of a person's owned tokens for a specific contract to safeTransferFrom
+ *    transferFrom:  transfersFrom without checking if the recipient can handle the ERC721
+ * 
+ * 
+ * view functions:
+ *    balanceOf: gets the number of NFTs owned by a wallet
+ *    getApproved: gets the approvals for a given nft ID
+ *    isApprovedForAll: returns a bool if this is approved by the owner for a specific operator
+ *    ownerOf: gets the owner of a specific nft ID
+ *    tokenByIndex: indexes the tokens
+ *    tokenOfOwnerByIndex:
+ *    tokneURI: gets the specific token URI
+ *    totalSupply: total number of NFTs created   
  * 
  */
