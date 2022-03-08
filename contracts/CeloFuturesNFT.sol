@@ -48,7 +48,7 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
 
     /// @dev function for transferring ownership one time only to the OTC contract
     /// @dev the OTC contract cannot transfer ownership again for security
-    /// @param the new OTC owner address 
+    /// @notice the new OTC owner address 
     function transferOwnership(address newOwner) public override onlyOwner {
         require(ownerSet == 0, "HNEC01: Owner already set");
         ownerSet = 1;
@@ -61,10 +61,10 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
      * @notice this external function creates a Future position
      * @dev A Future position is the combination of an NFT and a Future struct with the same index uint storing both information separately but with the same index
      * @dev the OTC contract as the owner is only allowed to call this function to ensure integrity of the minting process
-     * @param the address holder is the buyer and minter of the NFT
+     * @param holder is the buyer address and minter of the NFT
      * @param _amount is the amount with full decimals of the tokens being locked into the future
-     * @param the _asset is the address of the tokens that are being delivered to this contract to be held and locked
-     * @param the _expiry is the date in UTC in which the tokens can become redeemed - evaluated based on the block.timestamp
+     * @param _asset is the address of the tokens that are being delivered to this contract to be held and locked
+     * @param _expiry is the date in UTC in which the tokens can become redeemed - evaluated based on the block.timestamp
     */
     function createFuture(address holder, uint _amount, address _asset, uint _expiry) onlyOwner external returns (uint) {
         _tokenIds.increment();
