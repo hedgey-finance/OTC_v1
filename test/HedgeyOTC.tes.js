@@ -1,5 +1,5 @@
 /**
- * TESTS THAT NEED DO BE RUN FOR THE OTD BLOCK
+ * TESTS THAT NEED DO BE RUN FOR THE OTC CONTRACT
  * 
  * 1. Test the constructor function - and that it returns the two public values input into the constructor
  * 2. Test the create function - will need several iterations of this:
