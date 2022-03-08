@@ -71,7 +71,7 @@ contract HedgeyOTC is ReentrancyGuard {
      * @param ... or it is a single address that only that owner of the address can participate in purchasing the tokens
     */
     struct Deal {
-        address payable seller;
+        address seller;
         address token;
         address paymentCurrency;
         uint remainingAmount;
@@ -80,7 +80,7 @@ contract HedgeyOTC is ReentrancyGuard {
         uint maturity;
         uint unlockDate;
         bool open;
-        address payable buyer;
+        address buyer;
     }
 
     /// @dev the Deals are all mapped via the indexer d to deals mapping
@@ -167,7 +167,7 @@ contract HedgeyOTC is ReentrancyGuard {
         uint postBalance = IERC20(_token).balanceOf(address(this));
         assert(postBalance - currentBalance == amount);
         /// @dev creates the Deal struct with all of the parameters for inputs - and set the bool 'open' to true so that this offer can now be purchased
-        deals[d++] = Deal(payable(msg.sender), _token, _paymentCurrency, amount, min, _price, _maturity, _unlockDate, true, payable(_buyer));
+        deals[d++] = Deal(msg.sender, _token, _paymentCurrency, amount, min, _price, _maturity, _unlockDate, true, _buyer);
         emit NewDeal(d - 1, msg.sender, _token, _paymentCurrency, amount, min, _price, _maturity, _unlockDate, true, _buyer);
     }
 
@@ -227,7 +227,7 @@ contract HedgeyOTC is ReentrancyGuard {
         uint balanceCheck = (deal.paymentCurrency == weth) ? msg.value : IERC20(deal.paymentCurrency).balanceOf(msg.sender);
         require(balanceCheck >= purchase, "HECB: Insufficient Balance");
         /// @dev transfer the purchase to the deal seller
-        transferPymt(deal.paymentCurrency, msg.sender, deal.seller, purchase);
+        transferPymt(deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
         if (deal.unlockDate > block.timestamp) {
             /// @dev if the unlockdate is the in future, then we call our internal function lockTokens to lock those in the NFT contract
             lockTokens(payable(msg.sender), deal.token, amount, deal.unlockDate);
