@@ -131,10 +131,10 @@ contract HedgeyOTC is ReentrancyGuard {
      * @param _price is the price per token which you would like to get paid, denominated in the payment currency
      * @param _maturity is how long you would like to allow buyers to purchase tokens from this deal, in unix block time. this needs to be beyond current time
      * @param _unlockDate is used if you are requiring that tokens purchased by buyers are locked. If this is set to 0 or anything less than current time 
-     * @param ... any tokens purchased will not be locked but immediately delivered to the buyers. Otherwise the unlockDate will lock the tokens in the associated 
-     * @param ... futures NFT contract - which will hold the tokens in escrow until the unlockDate has passed - whereupon the owner of the NFT can redeem the tokens
+     * ... any tokens purchased will not be locked but immediately delivered to the buyers. Otherwise the unlockDate will lock the tokens in the associated 
+     * ... futures NFT contract - which will hold the tokens in escrow until the unlockDate has passed - whereupon the owner of the NFT can redeem the tokens
      * @param _buyer is a special option to make this a private deal - where only the buyer's address can participate and make the purchase. If this is set to the 
-     * @param ... Zero address - then it is publicly available and anyone can purchase tokens from this deal
+     * ... Zero address - then it is publicly available and anyone can purchase tokens from this deal
     */
     function create(
         address _token,
