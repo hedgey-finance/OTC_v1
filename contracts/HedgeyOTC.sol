@@ -91,7 +91,7 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @dev internal function that handles transfering payments from buyers to sellers with special WETH handling
     /// @dev this function assumes that if the recipient address is a contract, it cannot handle ETH - so we always deliver WETH
     /// @dev special care needs to be taken when using contract addresses to sell deals - to ensure it can handle WETH properly when received
-    function transferPymt(address _token, address from, address payable to, uint _amt) internal {
+    function _transferPymt(address _token, address from, address payable to, uint _amt) internal {
         if (_token == weth) {
             
             if (!Address.isContract(to)) {
@@ -109,12 +109,12 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @dev internal funciton that handles withdrawing tokens that are up for sale to buyers
     /// @dev this function is only called if the tokens are not timelocked
     /// @dev this function handles weth specially and delivers ETH to the recipient
-    function withdraw(address _token, address payable to, uint _total) internal {
+    function _withdraw(address _token, address payable to, uint _amt) internal {
         if (_token == weth) {
-            IWETH(weth).withdraw(_total);
-            to.transfer(_total);
+            IWETH(weth).withdraw(_amt);
+            to.transfer(_amt);
         } else {
-            SafeERC20.safeTransfer(IERC20(_token), to, _total);
+            SafeERC20.safeTransfer(IERC20(_token), to, _amt);
         }
     }
 
@@ -185,12 +185,7 @@ contract HedgeyOTC is ReentrancyGuard {
         require(deal.remainingAmount > 0, "HEC05: All tokens have been sold");
         require(deal.open, "HEC06: Deal has been closed");
         /// @dev once we have confirmed it is the seller and there are remaining tokens - physically pull the remaining balances and deliver to the seller
-        if (deal.token == weth) {
-            IWETH(weth).withdraw(deal.remainingAmount);
-            payable(msg.sender).transfer(deal.remainingAmount);
-        } else {
-            SafeERC20.safeTransfer(IERC20(deal.token), msg.sender, deal.remainingAmount);
-        }
+        _withdraw(deal.token, payable(msg.sender), deal.remainingAmount);
         /// @dev we now set the remaining amount to 0 and ensure the open flag is set to false, thus this deal can no longer be interacted with 
         deal.remainingAmount = 0;
         deal.open = false;
@@ -227,13 +222,13 @@ contract HedgeyOTC is ReentrancyGuard {
         uint balanceCheck = (deal.paymentCurrency == weth) ? msg.value : IERC20(deal.paymentCurrency).balanceOf(msg.sender);
         require(balanceCheck >= purchase, "HECB: Insufficient Balance");
         /// @dev transfer the purchase to the deal seller
-        transferPymt(deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
+        _transferPymt(deal.paymentCurrency, msg.sender, payable(deal.seller), purchase);
         if (deal.unlockDate > block.timestamp) {
             /// @dev if the unlockdate is the in future, then we call our internal function lockTokens to lock those in the NFT contract
-            lockTokens(payable(msg.sender), deal.token, amount, deal.unlockDate);
+            _lockTokens(payable(msg.sender), deal.token, amount, deal.unlockDate);
         } else {
             /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
-            withdraw(deal.token, payable(msg.sender), amount);
+            _withdraw(deal.token, payable(msg.sender), amount);
         }
         /// @dev reduce the deal remaining amount by how much was purchased. If the remainder is 0, then we consider this deal closed and set our open bool to false
         deal.remainingAmount -= amount;
@@ -247,7 +242,7 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @param _token address here is the asset that is locked in the NFT Future
     /// @param _amount is the amount of tokens that will be locked
     /// @param _unlockDate provides the unlock date which is the expiration date for the Future generated
-    function lockTokens(address payable _owner, address _token, uint _amount, uint _unlockDate) internal {
+    function _lockTokens(address payable _owner, address _token, uint _amount, uint _unlockDate) internal {
         require(_unlockDate > block.timestamp, "HEC10: Unlocked");
         /// @dev similar to checking the balances for the OTC contract when creating a new deal - we check the current and post balance in the NFT contract
         /// @dev to ensure that 100% of the amount of tokens to be locked are in fact locked in the contract address
