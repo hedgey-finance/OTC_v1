@@ -124,7 +124,7 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
         require(future.expiry < block.timestamp && future.amount > 0,"HNEC04: Tokens are still locked");
         //delivers the vested tokens to the vester
         emit FutureRedeemed(_id, holder, future.amount, future.asset, future.expiry);
-        withdraw(future.asset, holder, future.amount);
+        _withdraw(future.asset, holder, future.amount);
         delete futures[_id];
         _burn(_id);
     }
@@ -133,12 +133,12 @@ contract HedgeyHoglets is ERC721Enumerable, Ownable {
     /// @dev this contract stores WETH instead of ETH to represent ETH
     /// @dev which means that if we are delivering ETH back out, we will convert the WETH first and then transfer the ETH to the recipiient
     /// @dev if the tokens are not WETH, then we simply safely transfer them back out to the address
-    function withdraw(address _token, address payable to, uint _total) internal {
+    function _withdraw(address _token, address payable to, uint _amt) internal {
         if (_token == weth) {
-            IWETH(weth).withdraw(_total);
-            to.transfer(_total);
+            IWETH(weth).withdraw(_amt);
+            to.transfer(_amt);
         } else {
-            SafeERC20.safeTransfer(IERC20(_token), to, _total);
+            SafeERC20.safeTransfer(IERC20(_token), to, _amt);
         }
     }
 
