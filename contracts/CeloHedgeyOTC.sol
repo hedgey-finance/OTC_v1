@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -77,17 +77,6 @@ contract HedgeyOTC is ReentrancyGuard {
 
     /// @dev the Deals are all mapped via the indexer d to deals mapping
     mapping (uint => Deal) public deals;
-
-
-    /// @dev internal function that handles transfering payments from buyers to sellers 
-    function transferPymt(address _token, address from, address to, uint _amt) internal {
-        SafeERC20.safeTransferFrom(IERC20(_token), from, to, _amt);         
-    }
-
-    /// @dev internal funciton that handles withdrawing tokens that are up for sale to buyers
-    function withdraw(address _token, address to, uint _total) internal {
-        SafeERC20.safeTransfer(IERC20(_token), to, _total);
-    }
 
 
     /** 
@@ -187,13 +176,13 @@ contract HedgeyOTC is ReentrancyGuard {
         uint balanceCheck = IERC20(deal.paymentCurrency).balanceOf(msg.sender);
         require(balanceCheck >= purchase, "HECB: Insufficient Balance");
         /// @dev transfer the purchase to the deal seller
-        transferPymt(deal.paymentCurrency, msg.sender, deal.seller, purchase);
+        SafeERC20.safeTransferFrom(IERC20(deal.paymentCurrency), msg.sender, deal.seller, purchase);
         if (deal.unlockDate > block.timestamp) {
             /// @dev if the unlockdate is the in future, then we call our internal function lockTokens to lock those in the NFT contract
-            lockTokens(msg.sender, deal.token, amount, deal.unlockDate);
+            _lockTokens(msg.sender, deal.token, amount, deal.unlockDate);
         } else {
             /// @dev if the unlockDate is in the past or now - then tokens are already unlocked and delivered directly to the buyer
-            withdraw(deal.token, msg.sender, amount);
+            SafeERC20.safeTransfer(IERC20(deal.token), msg.sender, amount);
         }
         /// @dev reduce the deal remaining amount by how much was purchased. If the remainder is 0, then we consider this deal closed and set our open bool to false
         deal.remainingAmount -= amount;
@@ -207,7 +196,7 @@ contract HedgeyOTC is ReentrancyGuard {
     /// @param _token address here is the asset that is locked in the NFT Future
     /// @param _amount is the amount of tokens that will be locked
     /// @param _unlockDate provides the unlock date which is the expiration date for the Future generated
-    function lockTokens(address _owner, address _token, uint _amount, uint _unlockDate) internal {
+    function _lockTokens(address _owner, address _token, uint _amount, uint _unlockDate) internal {
         require(_unlockDate > block.timestamp, "HEC10: Unlocked");
         /// @dev similar to checking the balances for the OTC contract when creating a new deal - we check the current and post balance in the NFT contract
         /// @dev to ensure that 100% of the amount of tokens to be locked are in fact locked in the contract address
